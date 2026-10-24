@@ -1,0 +1,1183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Video Portfolio & Playground</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+        /* Pure pitch black container with hidden scrollbars and smooth touch snap handling */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-touch-callout: none;
+            cursor: none !important; /* Global Rocket Cursor replacement */
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            background-color: #000000;
+            overflow: hidden;
+            font-family: 'Inter', sans-serif;
+            touch-action: none;
+        }
+
+        /* Seamless Reel Snap Container */
+        .reels-container {
+            width: 100vw;
+            height: 100vh;
+            overflow-y: scroll;
+            scroll-snap-type: y mandatory;
+            scroll-behavior: smooth;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none; /* Firefox */
+            -ms-overflow-style: none; /* IE/Edge */
+        }
+
+        .reels-container::-webkit-scrollbar {
+            display: none; /* Chrome, Safari, Opera */
+        }
+
+        /* Fullscreen Reel & Game Section */
+        .reel-section {
+            width: 100vw;
+            height: 100vh;
+            scroll-snap-align: start;
+            scroll-snap-stop: always;
+            position: relative;
+            background-color: #000000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        /* Responsive Cover Video */
+        .reel-video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            background-color: #000000;
+            pointer-events: auto;
+        }
+
+        /* Global DOM Custom Rocket Cursor - ALWAYS ON TOP OF ALL UI */
+        #globalCursorRocket {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 50px;
+            height: 60px;
+            pointer-events: none !important; /* Lets clicks pass right through to elements below */
+            z-index: 200000 !important; /* Highest layer above drawer, header, modal, and canvas */
+            transform: translate(-50%, -50%);
+            transition: opacity 0.2s ease;
+            display: block;
+        }
+
+        #globalCursorRocket img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            display: block;
+            pointer-events: none !important;
+        }
+
+        /* DOM Rocket Fire Particles Overlay Canvas - ALWAYS ON TOP */
+        #thrusterCanvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            pointer-events: none !important;
+            z-index: 199999 !important;
+        }
+
+        canvas#gameCanvas {
+            display: block;
+        }
+
+        /* Pure Dot Navigation Styling (No Border) */
+        .nav-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 9999px;
+            background-color: rgba(255, 255, 255, 0.3);
+            transition: all 0.25s ease;
+            pointer-events: auto;
+        }
+
+        .nav-dot.active {
+            width: 10px;
+            height: 10px;
+            background-color: #ffffff;
+            box-shadow: 0 0 10px rgba(255, 255, 255, 0.9);
+        }
+
+        /* Top Right Menu Buttons Styling */
+        .top-nav-btn {
+            font-size: 10px;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            font-weight: 500;
+            color: rgba(255, 255, 255, 0.65);
+            transition: color 0.2s ease, transform 0.2s ease;
+            pointer-events: auto !important;
+            cursor: none !important;
+            padding: 4px 6px;
+            white-space: nowrap;
+        }
+
+        .top-nav-btn:hover {
+            color: #ffffff;
+            transform: translateY(-1px);
+        }
+
+        /* Hamburger Options Logo Styling (Top-Left) */
+        .hamburger-btn {
+            position: fixed;
+            top: 14px;
+            left: 20px;
+            z-index: 100001;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            width: 28px;
+            height: 20px;
+            background: transparent;
+            border: none;
+            outline: none;
+            pointer-events: auto !important;
+            padding: 2px;
+            transition: transform 0.2s ease;
+        }
+
+        .hamburger-btn span {
+            display: block;
+            width: 100%;
+            height: 3px;
+            background-color: #d1d5db;
+            border-radius: 2px;
+            transition: all 0.3s ease;
+        }
+
+        .hamburger-btn:hover span {
+            background-color: #ffffff;
+        }
+
+        /* Slide-out Menu Overlay & Drawer */
+        .menu-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(4px);
+            z-index: 100002;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+            pointer-events: auto !important;
+        }
+
+        .menu-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .side-menu {
+            position: fixed;
+            top: 0;
+            left: -320px;
+            width: 300px;
+            height: 100vh;
+            background: #2b2b2b;
+            z-index: 100003;
+            padding: 40px 28px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            transition: left 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+            box-shadow: 10px 0 30px rgba(0, 0, 0, 0.7);
+            pointer-events: auto !important;
+        }
+
+        .side-menu.active {
+            left: 0;
+        }
+
+        .side-menu-item {
+            font-weight: 500;
+            font-size: 15px;
+            color: #e2e8f0;
+            transition: color 0.2s ease, transform 0.2s ease;
+            pointer-events: auto !important;
+            padding: 8px 0;
+            text-align: left;
+            display: block;
+            width: 100%;
+        }
+
+        .side-menu-item:hover {
+            color: #ffffff;
+            transform: translateX(4px);
+        }
+
+        .side-social-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #ffffff;
+            font-size: 16px;
+            transition: background 0.2s ease, transform 0.2s ease;
+            pointer-events: auto !important;
+        }
+
+        .side-social-icon:hover {
+            background: rgba(255, 255, 255, 0.25);
+            transform: translateY(-2px);
+        }
+
+        /* Clickable contact items */
+        .contact-item {
+            pointer-events: auto !important;
+            transition: transform 0.2s ease, opacity 0.2s ease;
+        }
+
+        .contact-item:hover {
+            transform: translateY(-3px);
+            opacity: 0.85;
+        }
+
+        /* Resume Display Modal */
+        #resumeModal {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(8px);
+            z-index: 150000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+            pointer-events: auto !important;
+            padding: 20px;
+        }
+
+        #resumeModal.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        #resumeModal img {
+            max-width: 90vw;
+            max-height: 88vh;
+            object-fit: contain;
+            border-radius: 8px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+        }
+
+        .resume-trigger-btn {
+            pointer-events: auto !important;
+            transition: all 0.2s ease;
+        }
+
+        .resume-trigger-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 0 15px rgba(255, 255, 255, 0.3);
+        }
+
+        /* Persistent Portfolio Logo */
+        .site-logo {
+            position: fixed;
+            top: 48px;
+            left: 16px;
+            width: 48px;
+            height: 48px;
+            object-fit: contain;
+            z-index: 99999;
+            pointer-events: none;
+            transition: opacity 0.2s ease;
+        }
+
+        .site-logo.hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body class="bg-black text-white antialiased overflow-hidden">
+
+    <!-- Fire Trail Particle Canvas for Global Rocket Cursor -->
+    <canvas id="thrusterCanvas"></canvas>
+
+    <!-- Global DOM Rocket Cursor for ALL Slides (1 - 7) -->
+    <div id="globalCursorRocket">
+        <img src="SPACESHIP.png" alt="Rocket Cursor">
+    </div>
+
+    <!-- RESUME DISPLAY MODAL OVERLAY -->
+    <div id="resumeModal">
+        <button id="closeResumeBtn" class="absolute top-5 right-6 text-white text-2xl hover:text-slate-300 transition-colors pointer-events-auto bg-black/60 px-3 py-1.5 rounded-full border border-white/20">
+            <i class="fa-solid fa-xmark"></i>
+        </button>
+        <img src="resume.png" alt="Resume Display">
+    </div>
+
+    <!-- TOP-LEFT THREE LINES (HAMBURGER) OPTIONS BUTTON -->
+    <button id="menuToggleBtn" class="hamburger-btn" aria-label="Toggle Options Menu">
+        <span></span>
+        <span></span>
+        <span></span>
+    </button>
+
+    <!-- PERSISTENT PORTFOLIO LOGO -->
+    <img id="siteLogo" class="site-logo" src="LOGO.png" alt="Portfolio Logo">
+
+    <!-- SIDE DRAWER OVERLAY & MENU SLIDE-OUT -->
+    <div id="menuOverlay" class="menu-overlay"></div>
+    <aside id="sideMenu" class="side-menu">
+        <div>
+            <!-- Header Title / Close Button -->
+            <div class="flex items-center justify-between pb-6 mb-6 border-b border-white/10">
+                <span class="text-xs uppercase tracking-widest text-slate-400 font-semibold">Options</span>
+                <button id="closeMenuBtn" class="text-slate-400 hover:text-white text-lg transition-colors pointer-events-auto">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <!-- Side Options Navigation List -->
+            <nav class="flex flex-col gap-2">
+                <button class="side-menu-item" data-nav-target="1">About Me</button>
+                <button class="side-menu-item" data-nav-target="2">Education</button>
+                <button class="side-menu-item" data-nav-target="3">Skills</button>
+                <button class="side-menu-item" data-nav-target="4">Projects</button>
+                <button class="side-menu-item" data-nav-target="5">Achievements</button>
+                <button class="side-menu-item" data-nav-target="6">Playground</button>
+                <button class="side-menu-item" data-nav-target="6">Contact</button>
+                <button class="side-menu-item text-sky-400 font-semibold flex items-center gap-2" id="sideResumeBtn">
+                    <i class="fa-regular fa-file-lines"></i> Resume
+                </button>
+            </nav>
+        </div>
+
+        <!-- Down Social Profile Logos -->
+        <div class="pt-6 border-t border-white/10">
+            <p class="text-[11px] uppercase tracking-wider text-slate-400 mb-3 font-medium">Connect</p>
+            <div class="flex items-center gap-4">
+                <a href="https://www.linkedin.com/in/nikshiptha-marathi-703550293/?lipi=urn%3Ali%3Apage%3Ad_flagship3_profile_view_base_contact_details%3BYSgE0b4SSBesqN8q3tdLmA%3D%3D" target="_blank" class="side-social-icon" aria-label="LinkedIn">
+                    <i class="fa-brands fa-linkedin-in"></i>
+                </a>
+                <a href="mailto:marathinikshiptha@gmail.com" class="side-social-icon" aria-label="Mail">
+                    <i class="fa-regular fa-envelope"></i>
+                </a>
+                <a href="https://github.com/nikxshiptha" target="_blank" class="side-social-icon" aria-label="GitHub">
+                    <i class="fa-brands fa-github"></i>
+                </a>
+            </div>
+        </div>
+    </aside>
+
+    <!-- PERSISTENT TOP-RIGHT NAVIGATION HEADER -->
+    <header class="fixed top-3 right-6 z-[100000] flex items-center gap-1 sm:gap-3 bg-black/40 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10 shadow-lg pointer-events-auto">
+        <button class="top-nav-btn" data-nav-target="1">ABOUT ME</button>
+        <span class="text-white/20 text-[10px]">•</span>
+        <button class="top-nav-btn" data-nav-target="2">EDUCATION</button>
+        <span class="text-white/20 text-[10px]">•</span>
+        <button class="top-nav-btn" data-nav-target="3">SKILLS</button>
+        <span class="text-white/20 text-[10px]">•</span>
+        <button class="top-nav-btn" data-nav-target="4">PROJECTS</button>
+        <span class="text-white/20 text-[10px]">•</span>
+        <button class="top-nav-btn" data-nav-target="5">ACHIEVEMENTS</button>
+        <span class="text-white/20 text-[10px]">•</span>
+        <button class="top-nav-btn" data-nav-target="6">PLAYGROUND</button>
+        <span class="text-white/20 text-[10px]">•</span>
+        <button class="top-nav-btn" data-nav-target="6">CONTACT</button>
+        <span class="text-white/20 text-[10px]">•</span>
+        <button class="top-nav-btn text-sky-400 font-semibold" id="topResumeBtn">RESUME</button>
+    </header>
+
+    <!-- RIGHT CORNER SLIDE DOT NAVIGATION (PURE DOTS ONLY) -->
+    <nav id="dotNav" class="fixed right-4 top-1/2 -translate-y-1/2 z-[99997] flex flex-col items-center gap-3 py-2 pointer-events-none">
+        <button class="nav-dot active" data-slide="0" aria-label="Slide 1"></button>
+        <button class="nav-dot" data-slide="1" aria-label="Slide 2"></button>
+        <button class="nav-dot" data-slide="2" aria-label="Slide 3"></button>
+        <button class="nav-dot" data-slide="3" aria-label="Slide 4"></button>
+        <button class="nav-dot" data-slide="4" aria-label="Slide 5"></button>
+        <button class="nav-dot" data-slide="5" aria-label="Slide 6"></button>
+        <button class="nav-dot" data-slide="6" aria-label="Slide 7 (Game & Contact)"></button>
+    </nav>
+
+    <!-- MAIN REELS & GAME SCROLL CONTAINER -->
+    <main class="reels-container" id="reelsContainer">
+
+        <!-- REEL 01: SUIT.mp4 -->
+        <section class="reel-section">
+            <video class="reel-video" id="firstReelVideo" autoplay muted loop playsinline preload="auto">
+                <source src="SUIT.mp4" type="video/mp4">
+            </video>
+        </section>
+
+        <!-- REEL 02: SUIT1.mp4 (ABOUT ME) -->
+        <section class="reel-section">
+            <video class="reel-video" muted loop playsinline preload="auto">
+                <source src="SUIT1.mp4" type="video/mp4">
+            </video>
+        </section>
+
+        <!-- REEL 03: SUIT2.mp4 (EDUCATION) -->
+        <section class="reel-section">
+            <video class="reel-video" muted loop playsinline preload="auto">
+                <source src="SUIT2.mp4" type="video/mp4">
+            </video>
+        </section>
+
+        <!-- REEL 04: SUIT3.mp4 (SKILLS) -->
+        <section class="reel-section">
+            <video class="reel-video" muted loop playsinline preload="auto">
+                <source src="SUIT3.mp4" type="video/mp4">
+            </video>
+        </section>
+
+        <!-- REEL 05: SUIT4.mp4 (PROJECTS) -->
+        <section class="reel-section">
+            <video class="reel-video" muted loop playsinline preload="auto">
+                <source src="SUIT4.mp4" type="video/mp4">
+            </video>
+        </section>
+
+        <!-- REEL 06: suit5.mp4 (ACHIEVEMENTS) -->
+        <section class="reel-section">
+            <video class="reel-video" muted loop playsinline preload="auto">
+                <source src="suit5.mp4" type="video/mp4">
+            </video>
+        </section>
+
+        <!-- 7TH SLIDE: GAME PLAYGROUND (3/4th Running Game) + CONTACT POPUP (1/4th Screen Bottom) -->
+        <section class="reel-section flex-col justify-between" id="gameSection">
+            
+            <!-- TOP 3/4TH ACTIVE GAME PLAYGROUND CONTAINER -->
+            <div class="relative w-full h-[75vh] overflow-hidden">
+                <!-- Interactive Canvas -->
+                <canvas id="gameCanvas" class="absolute inset-0 z-0 w-full h-full"></canvas>
+
+                <!-- Top Left Stats HUD Interface -->
+                <header class="absolute top-3 left-16 z-20 pointer-events-none flex items-center text-xs text-slate-300">
+                    <div class="flex items-center gap-3 bg-black/70 border border-slate-800/70 rounded-lg px-3.5 py-2 backdrop-blur-md shadow-lg">
+                        <div class="flex items-center gap-1.5 whitespace-nowrap">
+                            <span class="text-slate-400">Score:</span>
+                            <span id="scoreDisplay" class="font-medium text-slate-100 font-mono">0</span>
+                        </div>
+                        <span class="text-slate-700">|</span>
+                        <div class="flex items-center gap-1.5 whitespace-nowrap">
+                            <span class="text-slate-400">Destroyed:</span>
+                            <span id="destroyedDisplay" class="font-medium text-slate-100 font-mono">0</span>
+                        </div>
+                        <span class="hidden sm:inline text-slate-700">|</span>
+                        <div class="hidden sm:flex items-center gap-1.5 whitespace-nowrap">
+                            <span class="text-slate-400">Accuracy:</span>
+                            <span id="accuracyDisplay" class="font-medium text-slate-100 font-mono">100%</span>
+                        </div>
+                    </div>
+                </header>
+            </div>
+
+            <!-- BOTTOM 1/4TH CONTACT POPUP BLOCK -->
+            <div id="contactBlock" class="w-full h-[25vh] bg-black/95 border-t border-slate-900 z-30 flex flex-col items-center justify-center px-4 py-2 pointer-events-auto">
+                
+                <!-- TOP OF CONTACT: RESUME OPTION BUTTON -->
+                <div class="mb-1 sm:mb-2">
+                    <button id="slideResumeBtn" class="resume-trigger-btn flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white border border-white/20 text-xs sm:text-sm font-semibold px-4 py-1.5 rounded-full backdrop-blur-md transition-all">
+                        <i class="fa-regular fa-file-lines text-sky-400"></i> VIEW RESUME
+                    </button>
+                </div>
+
+                <div class="max-w-4xl w-full grid grid-cols-3 gap-2 sm:gap-6 text-center text-white">
+
+                    <!-- LinkedIn Column -->
+                    <a href="https://www.linkedin.com/in/nikshiptha-marathi-703550293/?lipi=urn%3Ali%3Apage%3Ad_flagship3_profile_view_base_contact_details%3BYSgE0b4SSBesqN8q3tdLmA%3D%3D" target="_blank" class="contact-item flex flex-col items-center justify-center p-1.5 rounded-xl group">
+                        <i class="fa-brands fa-linkedin-in text-lg sm:text-xl mb-1 text-white"></i>
+                        <h4 class="font-bold text-xs sm:text-sm tracking-wide text-white">LinkedIn</h4>
+                        <p class="text-[10px] sm:text-xs text-slate-400 font-mono mt-0.5 truncate max-w-[110px] sm:max-w-none">Nikshiptha Marathi</p>
+                    </a>
+
+                    <!-- Mail Column -->
+                    <a href="mailto:marathinikshiptha@gmail.com" class="contact-item flex flex-col items-center justify-center p-1.5 rounded-xl group">
+                        <i class="fa-regular fa-envelope text-lg sm:text-xl mb-1 text-white"></i>
+                        <h4 class="font-bold text-xs sm:text-sm tracking-wide text-white">Email</h4>
+                        <p class="text-[10px] sm:text-xs text-slate-400 font-mono mt-0.5 truncate max-w-[110px] sm:max-w-none">marathinikshiptha@gmail.com</p>
+                    </a>
+
+                    <!-- GitHub Column -->
+                    <a href="https://github.com/nikxshiptha" target="_blank" class="contact-item flex flex-col items-center justify-center p-1.5 rounded-xl group">
+                        <i class="fa-brands fa-github text-lg sm:text-xl mb-1 text-white"></i>
+                        <h4 class="font-bold text-xs sm:text-sm tracking-wide text-white">GitHub</h4>
+                        <p class="text-[10px] sm:text-xs text-slate-400 font-mono mt-0.5 truncate max-w-[110px] sm:max-w-none">nikxshiptha</p>
+                    </a>
+
+                </div>
+            </div>
+
+        </section>
+
+    </main>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            /* Ensure first slide displays and plays immediately */
+            const container = document.getElementById("reelsContainer");
+            const firstVideo = document.getElementById("firstReelVideo");
+            if (container) container.scrollTop = 0;
+            if (firstVideo) {
+                firstVideo.play().catch(() => {
+                    firstVideo.muted = true;
+                    firstVideo.play().catch(() => {});
+                });
+            }
+
+            /* Resume Modal Logic */
+            const resumeModal = document.getElementById("resumeModal");
+            const closeResumeBtn = document.getElementById("closeResumeBtn");
+            const topResumeBtn = document.getElementById("topResumeBtn");
+            const sideResumeBtn = document.getElementById("sideResumeBtn");
+            const slideResumeBtn = document.getElementById("slideResumeBtn");
+
+            function openResumeModal() {
+                if (resumeModal) resumeModal.classList.add("active");
+                closeSideMenu();
+            }
+
+            function closeResumeModal() {
+                if (resumeModal) resumeModal.classList.remove("active");
+            }
+
+            if (topResumeBtn) topResumeBtn.addEventListener("click", openResumeModal);
+            if (sideResumeBtn) sideResumeBtn.addEventListener("click", openResumeModal);
+            if (slideResumeBtn) slideResumeBtn.addEventListener("click", openResumeModal);
+            if (closeResumeBtn) closeResumeBtn.addEventListener("click", closeResumeModal);
+            if (resumeModal) {
+                resumeModal.addEventListener("click", (e) => {
+                    if (e.target === resumeModal) closeResumeModal();
+                });
+            }
+
+            /* =========================================================
+               1. SLIDE NAVIGATION, DOTS & VIDEO INTERSECTION
+            ========================================================= */
+            const sections = document.querySelectorAll(".reel-section");
+            const gameSection = document.getElementById("gameSection");
+            const navDots = document.querySelectorAll(".nav-dot");
+            const topNavBtns = document.querySelectorAll(".top-nav-btn");
+
+            /* Menu Drawer Controls */
+            const menuToggleBtn = document.getElementById("menuToggleBtn");
+            const menuOverlay = document.getElementById("menuOverlay");
+            const sideMenu = document.getElementById("sideMenu");
+            const closeMenuBtn = document.getElementById("closeMenuBtn");
+            const sideMenuItems = document.querySelectorAll(".side-menu-item");
+            const siteLogo = document.getElementById("siteLogo");
+
+            function openSideMenu() {
+                sideMenu.classList.add("active");
+                menuOverlay.classList.add("active");
+                if (siteLogo) siteLogo.classList.add("hidden");
+            }
+
+            function closeSideMenu() {
+                sideMenu.classList.remove("active");
+                menuOverlay.classList.remove("active");
+                if (siteLogo) siteLogo.classList.remove("hidden");
+            }
+
+            if (menuToggleBtn) menuToggleBtn.addEventListener("click", openSideMenu);
+            if (closeMenuBtn) closeMenuBtn.addEventListener("click", closeSideMenu);
+            if (menuOverlay) menuOverlay.addEventListener("click", closeSideMenu);
+
+            sideMenuItems.forEach((btn) => {
+                if (btn === sideResumeBtn) return;
+                btn.addEventListener("click", (e) => {
+                    e.stopPropagation();
+                    const targetIndex = parseInt(btn.getAttribute("data-nav-target"));
+                    if (sections[targetIndex]) {
+                        sections[targetIndex].scrollIntoView({ behavior: "smooth" });
+                    }
+                    closeSideMenu();
+                });
+            });
+
+            // Video pre-buffer logic to ensure seamless video play without stutter
+            document.querySelectorAll("video").forEach((vid) => {
+                vid.play().then(() => {
+                    if (vid !== firstVideo) {
+                        vid.pause();
+                        vid.currentTime = 0;
+                    }
+                }).catch(() => {});
+            });
+
+            const observerOptions = {
+                root: container,
+                threshold: 0.6
+            };
+
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach((entry) => {
+                    const video = entry.target.querySelector("video");
+
+                    if (entry.isIntersecting) {
+                        const slideIndex = Array.from(sections).indexOf(entry.target);
+                        
+                        navDots.forEach((dot, index) => {
+                            if (index === slideIndex) {
+                                dot.classList.add("active");
+                            } else {
+                                dot.classList.remove("active");
+                            }
+                        });
+
+                        if (entry.target === gameSection) {
+                            isInGameSlide = true;
+                        }
+                    } else {
+                        if (entry.target === gameSection) {
+                            isInGameSlide = false;
+                            isFiring = false;
+                            isCursorInContactBlock = false;
+                        }
+                    }
+
+                    if (!video) return;
+
+                    if (entry.isIntersecting) {
+                        const playPromise = video.play();
+                        if (playPromise !== undefined) {
+                            playPromise.catch(() => {
+                                video.muted = true;
+                                video.play().catch(() => {});
+                            });
+                        }
+                    } else {
+                        video.pause();
+                        video.currentTime = 0;
+                    }
+                });
+            }, observerOptions);
+
+            sections.forEach((section) => observer.observe(section));
+
+            // Enable Dot Click Navigation
+            navDots.forEach((dot) => {
+                dot.addEventListener("click", () => {
+                    const index = parseInt(dot.getAttribute("data-slide"));
+                    sections[index].scrollIntoView({ behavior: "smooth" });
+                });
+            });
+
+            // Enable Top Navigation Header Button Clicks
+            topNavBtns.forEach((btn) => {
+                if (btn === topResumeBtn) return;
+                btn.addEventListener("click", (e) => {
+                    e.stopPropagation();
+                    const targetIndex = parseInt(btn.getAttribute("data-nav-target"));
+                    if (sections[targetIndex]) {
+                        sections[targetIndex].scrollIntoView({ behavior: "smooth" });
+                    }
+                });
+            });
+
+            document.querySelectorAll("video").forEach((video) => {
+                video.addEventListener("click", () => {
+                    if (video.paused) {
+                        video.play();
+                    } else {
+                        video.pause();
+                    }
+                });
+            });
+
+            /* =========================================================
+               2. GLOBAL ROCKET CURSOR & TRANSITION LOGIC
+            ========================================================= */
+            const globalRocketEl = document.getElementById("globalCursorRocket");
+            const tCanvas = document.getElementById("thrusterCanvas");
+            const tCtx = tCanvas.getContext("2d");
+
+            let mouseX = window.innerWidth / 2;
+            let mouseY = window.innerHeight / 2;
+            let rocketX = mouseX;
+            let rocketY = mouseY;
+            let isInGameSlide = false;
+            let isCursorInContactBlock = false;
+
+            function resizeThrusterCanvas() {
+                tCanvas.width = window.innerWidth;
+                tCanvas.height = window.innerHeight;
+            }
+            window.addEventListener("resize", resizeThrusterCanvas);
+            resizeThrusterCanvas();
+
+            class GlobalThrusterParticle {
+                constructor(x, y) {
+                    this.x = x + (Math.random() - 0.5) * 6;
+                    this.y = y;
+                    this.vx = (Math.random() - 0.5) * 1.2;
+                    this.vy = Math.random() * 3 + 2.5;
+                    this.radius = Math.random() * 2.5 + 1.0;
+                    this.alpha = 0.9;
+                    this.decay = Math.random() * 0.05 + 0.03;
+                    this.color = Math.random() > 0.35 ? '#fdba74' : '#38bdf8';
+                }
+
+                update() {
+                    this.x += this.vx;
+                    this.y += this.vy;
+                    this.alpha -= this.decay;
+                }
+
+                draw(ctx) {
+                    ctx.save();
+                    ctx.globalAlpha = Math.max(0, this.alpha);
+                    ctx.fillStyle = this.color;
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.restore();
+                }
+            }
+
+            let globalParticles = [];
+
+            function updateGlobalCursor() {
+                rocketX += (mouseX - rocketX) * 0.35;
+                rocketY += (mouseY - rocketY) * 0.35;
+
+                if (globalRocketEl) {
+                    globalRocketEl.style.left = `${rocketX}px`;
+                    globalRocketEl.style.top = `${rocketY}px`;
+                }
+
+                tCtx.clearRect(0, 0, tCanvas.width, tCanvas.height);
+
+                globalParticles.push(new GlobalThrusterParticle(rocketX, rocketY + 22));
+                globalParticles.push(new GlobalThrusterParticle(rocketX, rocketY + 22));
+
+                for (let i = globalParticles.length - 1; i >= 0; i--) {
+                    const p = globalParticles[i];
+                    p.update();
+                    p.draw(tCtx);
+                    if (p.alpha <= 0) globalParticles.splice(i, 1);
+                }
+
+                requestAnimationFrame(updateGlobalCursor);
+            }
+            requestAnimationFrame(updateGlobalCursor);
+
+            // Contact Block Hover Detection
+            const contactBlock = document.getElementById("contactBlock");
+            if (contactBlock) {
+                contactBlock.addEventListener("mouseenter", () => {
+                    isCursorInContactBlock = true;
+                });
+                contactBlock.addEventListener("mouseleave", () => {
+                    isCursorInContactBlock = false;
+                });
+            }
+
+            window.addEventListener("mousemove", (e) => {
+                mouseX = e.clientX;
+                mouseY = e.clientY;
+                if (rocket) {
+                    rocket.targetX = e.clientX;
+                    rocket.targetY = e.clientY;
+                }
+            });
+
+            window.addEventListener("touchmove", (e) => {
+                if (e.touches.length > 0) {
+                    mouseX = e.touches[0].clientX;
+                    mouseY = e.touches[0].clientY;
+                    if (rocket) {
+                        rocket.targetX = e.touches[0].clientX;
+                        rocket.targetY = e.touches[0].clientY;
+                    }
+                }
+            }, { passive: true });
+
+            /* =========================================================
+               3. INFINITE SPACE SHOOTER GAME ENGINE (SLIDE 7)
+            ========================================================= */
+            const canvas = document.getElementById('gameCanvas');
+            const ctx = canvas.getContext('2d');
+
+            const bgImage = new Image();
+            bgImage.src = 'SPACE.png';
+
+            const shipImage = new Image();
+            shipImage.src = 'SPACESHIP.png';
+
+            const asteroidImage = new Image();
+            asteroidImage.src = 'ASTROID.png';
+
+            const scoreDisplay = document.getElementById('scoreDisplay');
+            const destroyedDisplay = document.getElementById('destroyedDisplay');
+            const accuracyDisplay = document.getElementById('accuracyDisplay');
+
+            let width = 0;
+            let height = 0;
+            let isFiring = false;
+            let lastShotTime = 0;
+            const FIRE_RATE = 90;
+
+            let score = 0;
+            let asteroidsDestroyed = 0;
+            let shotsFired = 0;
+            let shotsHit = 0;
+
+            let bullets = [];
+            let asteroids = [];
+            let particles = [];
+            let thrusterParticles = [];
+
+            function resizeCanvas() {
+                if (canvas.parentElement) {
+                    width = canvas.parentElement.clientWidth;
+                    height = canvas.parentElement.clientHeight;
+                } else {
+                    width = window.innerWidth;
+                    height = window.innerHeight * 0.75;
+                }
+                canvas.width = width;
+                canvas.height = height;
+
+                if (rocket) {
+                    if (rocket.x === 0) rocket.x = width / 2;
+                    if (rocket.y === 0) rocket.y = height / 2;
+                }
+            }
+
+            class Rocket {
+                constructor() {
+                    this.x = width / 2;
+                    this.y = height / 2;
+                    this.targetX = width / 2;
+                    this.targetY = height / 2;
+                    this.width = 60;
+                    this.height = 70;
+                }
+
+                update() {
+                    this.x += (this.targetX - this.x) * 0.22;
+                    this.y += (this.targetY - this.y) * 0.22;
+                    
+                    this.x = Math.max(25, Math.min(window.innerWidth - 25, this.x));
+                    this.y = Math.max(25, Math.min(window.innerHeight - 25, this.y));
+                }
+
+                draw() {
+                    // Blank draw function inside game canvas so global rocket cursor handles image top overlay
+                }
+            }
+
+            class Asteroid {
+                constructor(initialSpawn = false) {
+                    this.size = Math.random() * 70 + 40; 
+                    this.radius = this.size / 2;
+                    
+                    this.x = Math.random() * (width - this.size) + this.radius;
+                    
+                    if (initialSpawn) {
+                        this.y = Math.random() * (height - 100);
+                    } else {
+                        this.y = -this.size - 30;
+                    }
+                    
+                    this.vy = Math.random() * 2 + 1.2 + (this.size / 70); 
+                    this.vx = (Math.random() - 0.5) * 1.5;
+                    
+                    this.angle = Math.random() * Math.PI * 2;
+                    this.rotationSpeed = (Math.random() - 0.5) * 0.025;
+                    this.active = true;
+                }
+
+                update() {
+                    this.x += this.vx;
+                    this.y += this.vy;
+                    this.angle += this.rotationSpeed;
+
+                    if (this.y > height + this.size + 40 || this.x < -this.size || this.x > width + this.size) {
+                        this.reset();
+                    }
+                }
+
+                reset() {
+                    this.size = Math.random() * 70 + 40;
+                    this.radius = this.size / 2;
+                    this.y = -this.size - 40;
+                    this.x = Math.random() * (width - this.size) + this.radius;
+                    this.vy = Math.random() * 2 + 1.2 + (this.size / 70);
+                    this.vx = (Math.random() - 0.5) * 1.5;
+                }
+
+                draw() {
+                    ctx.save();
+                    ctx.translate(this.x, this.y);
+                    ctx.rotate(this.angle);
+
+                    if (asteroidImage.complete && asteroidImage.naturalWidth !== 0) {
+                        ctx.drawImage(
+                            asteroidImage,
+                            -this.size / 2,
+                            -this.size / 2,
+                            this.size,
+                            this.size
+                        );
+                    } else {
+                        ctx.fillStyle = '#64748b';
+                        ctx.beginPath();
+                        ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+
+                    ctx.restore();
+                }
+            }
+
+            class Bullet {
+                constructor(x, y) {
+                    this.x = x;
+                    this.y = y;
+                    this.speed = 20;
+                    this.radius = 2.5;
+                    this.active = true;
+                }
+
+                update() {
+                    this.y -= this.speed;
+                    if (this.y < -20) this.active = false;
+                }
+
+                draw() {
+                    ctx.save();
+                    ctx.shadowColor = '#38bdf8';
+                    ctx.shadowBlur = 8;
+                    ctx.strokeStyle = '#38bdf8';
+                    ctx.lineWidth = 2.5;
+                    ctx.lineCap = 'round';
+
+                    ctx.beginPath();
+                    ctx.moveTo(this.x, this.y);
+                    ctx.lineTo(this.x, this.y + 12);
+                    ctx.stroke();
+
+                    ctx.fillStyle = '#ffffff';
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, 1.5, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.restore();
+                }
+            }
+
+            class Particle {
+                constructor(x, y, color) {
+                    this.x = x;
+                    this.y = y;
+                    this.color = color;
+                    const speed = Math.random() * 4 + 0.8;
+                    const angle = Math.random() * Math.PI * 2;
+                    this.vx = Math.cos(angle) * speed;
+                    this.vy = Math.sin(angle) * speed;
+                    this.radius = Math.random() * 2.5 + 1;
+                    this.alpha = 1;
+                    this.decay = Math.random() * 0.03 + 0.018;
+                }
+
+                update() {
+                    this.x += this.vx;
+                    this.y += this.vy;
+                    this.alpha -= this.decay;
+                }
+
+                draw() {
+                    ctx.save();
+                    ctx.globalAlpha = Math.max(0, this.alpha);
+                    ctx.fillStyle = this.color;
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.restore();
+                }
+            }
+
+            const rocket = new Rocket();
+
+            function fireBullet() {
+                bullets.push(new Bullet(rocket.x - 17, rocket.y - 10));
+                bullets.push(new Bullet(rocket.x + 17, rocket.y - 10));
+                shotsFired += 2;
+                updateHUD();
+            }
+
+            function createExplosion(x, y, radius) {
+                const count = Math.floor(radius * 1.5);
+                const colors = ['#94a3b8', '#cbd5e1', '#fdba74', '#f97316', '#38bdf8'];
+                for (let i = 0; i < count; i++) {
+                    particles.push(new Particle(x, y, colors[Math.floor(Math.random() * colors.length)]));
+                }
+            }
+
+            function initAsteroids() {
+                asteroids = [];
+                const targetCount = Math.min(20, Math.max(8, Math.floor(width / 80)));
+                for (let i = 0; i < targetCount; i++) {
+                    asteroids.push(new Asteroid(true));
+                }
+            }
+
+            function manageAsteroids() {
+                const targetCount = Math.min(20, Math.max(8, Math.floor(width / 80)));
+                while (asteroids.length < targetCount) {
+                    asteroids.push(new Asteroid(false));
+                }
+            }
+
+            function updateHUD() {
+                scoreDisplay.textContent = score.toLocaleString();
+                destroyedDisplay.textContent = asteroidsDestroyed.toLocaleString();
+                const accuracy = shotsFired > 0 ? Math.min(100, Math.round((shotsHit / shotsFired) * 100)) : 100;
+                accuracyDisplay.textContent = accuracy + '%';
+            }
+
+            function checkCollisions() {
+                for (let b = bullets.length - 1; b >= 0; b--) {
+                    const bullet = bullets[b];
+                    if (!bullet.active) continue;
+
+                    for (let a = asteroids.length - 1; a >= 0; a--) {
+                        const asteroid = asteroids[a];
+                        const dx = bullet.x - asteroid.x;
+                        const dy = bullet.y - asteroid.y;
+                        const dist = Math.sqrt(dx * dx + dy * dy);
+
+                        if (dist < asteroid.radius + bullet.radius) {
+                            bullet.active = false;
+                            createExplosion(asteroid.x, asteroid.y, asteroid.radius);
+                            score += Math.max(10, Math.round((120 - asteroid.size) * 8));
+                            asteroidsDestroyed++;
+                            shotsHit++;
+                            asteroid.reset();
+                            updateHUD();
+                            break;
+                        }
+                    }
+                }
+            }
+
+            function drawSpaceBackground() {
+                if (bgImage.complete && bgImage.naturalWidth !== 0) {
+                    ctx.drawImage(bgImage, 0, 0, width, height);
+                } else {
+                    ctx.fillStyle = '#020617';
+                    ctx.fillRect(0, 0, width, height);
+                }
+            }
+
+            function animate(currentTime) {
+                drawSpaceBackground();
+
+                if (isInGameSlide && !isCursorInContactBlock && isFiring && currentTime - lastShotTime >= FIRE_RATE) {
+                    fireBullet();
+                    lastShotTime = currentTime;
+                }
+
+                manageAsteroids();
+
+                rocket.update();
+                rocket.draw();
+
+                for (let i = bullets.length - 1; i >= 0; i--) {
+                    const bullet = bullets[i];
+                    bullet.update();
+                    bullet.draw();
+                    if (!bullet.active) bullets.splice(i, 1);
+                }
+
+                for (const asteroid of asteroids) {
+                    asteroid.update();
+                    asteroid.draw();
+                }
+
+                checkCollisions();
+
+                for (let i = particles.length - 1; i >= 0; i--) {
+                    const p = particles[i];
+                    p.update();
+                    p.draw();
+                    if (p.alpha <= 0) particles.splice(i, 1);
+                }
+
+                requestAnimationFrame(animate);
+            }
+
+            function setupEventListeners() {
+                window.addEventListener('resize', () => {
+                    resizeCanvas();
+                });
+
+                window.addEventListener('mousedown', (e) => {
+                    if (e.target.closest('header') || e.target.closest('.top-nav-btn') || e.target.closest('#sideMenu') || e.target.closest('#menuToggleBtn') || e.target.closest('#contactBlock') || e.target.closest('#resumeModal')) return;
+
+                    if (e.button === 0 && isInGameSlide && !isCursorInContactBlock) {
+                        isFiring = true;
+                        fireBullet();
+                        lastShotTime = performance.now();
+                    }
+                });
+
+                window.addEventListener('mouseup', (e) => {
+                    if (e.button === 0) isFiring = false;
+                });
+
+                window.addEventListener('touchstart', (e) => {
+                    if (e.target.closest('header') || e.target.closest('.top-nav-btn') || e.target.closest('#sideMenu') || e.target.closest('#menuToggleBtn') || e.target.closest('#contactBlock') || e.target.closest('#resumeModal')) return;
+
+                    if (e.touches.length > 0) {
+                        mouseX = e.touches[0].clientX;
+                        mouseY = e.touches[0].clientY;
+                        rocket.targetX = e.touches[0].clientX;
+                        rocket.targetY = e.touches[0].clientY;
+                        if (isInGameSlide && !isCursorInContactBlock) {
+                            isFiring = true;
+                            fireBullet();
+                            lastShotTime = performance.now();
+                        }
+                    }
+                }, { passive: true });
+
+                window.addEventListener('touchend', () => {
+                    isFiring = false;
+                });
+            }
+
+            resizeCanvas();
+            initAsteroids();
+            setupEventListeners();
+            requestAnimationFrame(animate);
+        });
+    </script>
+</body>
+</html>
